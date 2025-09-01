@@ -6,7 +6,7 @@
 // define the structure of registers
 typedef struct {
 	// general purpose registers
-	union1 {
+	union {
 		union {
 			union {
 				uint32_t _32;
