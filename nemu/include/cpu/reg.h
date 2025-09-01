@@ -2,7 +2,9 @@
 #define __REG_H__
 
 #include "nemu.h"
-
+/*
+kouylty localhost 111
+*/
 // define the structure of registers
 typedef struct {
 	// general purpose registers
