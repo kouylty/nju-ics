@@ -4,23 +4,18 @@
 #include "nemu.h"
 
 // define the structure of registers
-typedef struct
-{
+typedef struct {
 	// general purpose registers
-	struct
-	{
-		struct
-		{
-			struct
-			{
+	union {
+		union {
+			union {
 				uint32_t _32;
 				uint16_t _16;
 				uint8_t _8[2];
 			};
 			uint32_t val;
-		} gpr[8];
-		struct
-		{ // do not change the order of the registers
+		}gpr[8];
+		struct { // do not change the order of the registers
 			uint32_t eax, ecx, edx, ebx, esp, ebp, esi, edi;
 		};
 	};
@@ -30,8 +25,7 @@ typedef struct
 
 	// EFLAGS
 	union {
-		struct
-		{
+		struct {
 			uint32_t CF : 1;
 			uint32_t dummy0 : 1;
 			uint32_t PF : 1;
@@ -59,8 +53,7 @@ typedef struct
 	// segment registers, todo: define type SegReg
 	union {
 		SegReg segReg[6];
-		struct
-		{
+		struct {
 			SegReg es, cs, ss, ds, fs, gs;
 		};
 	};
@@ -85,8 +78,7 @@ typedef struct
 #endif
 } CPU_STATE;
 
-enum
-{
+enum {
 	REG_AL,
 	REG_CL,
 	REG_DL,
@@ -96,8 +88,7 @@ enum
 	REG_DH,
 	REG_BH
 };
-enum
-{
+enum {
 	REG_AX,
 	REG_CX,
 	REG_DX,
@@ -107,8 +98,7 @@ enum
 	REG_SI,
 	REG_DI
 };
-enum
-{
+enum {
 	REG_EAX,
 	REG_ECX,
 	REG_EDX,
@@ -119,8 +109,7 @@ enum
 	REG_EDI
 };
 
-enum
-{
+enum {
 	SREG_ES,
 	SREG_CS,
 	SREG_SS,
