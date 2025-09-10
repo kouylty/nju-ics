@@ -11,46 +11,40 @@ inline uint32_t internal_normalize(uint32_t sign, int32_t exp, uint64_t sig_grs)
 
 	// normalization
 	bool overflow = false; // true if the result is INFINITY or 0 during normalize
-
+	sign &= 1;
 	if ((sig_grs >> (23 + 3)) > 1 || exp < 0)
 	{
 		// normalize toward right
 		while ((((sig_grs >> (23 + 3)) > 1) && exp < 0xff) // condition 1
-			   ||										   // or
-			   (sig_grs > 0x04 && exp < 0)				   // condition 2
-			   )
+			   || (sig_grs > 0x04 && exp < 0))			   // condition 2
 		{
 
 			/* TODO: shift right, pay attention to sticky bit*/
-			printf("\e[0;31mPlease implement me at fpu.c\e[0m\n");
-			fflush(stdout);
-			assert(0);
+			uint8_t sticky = sig_grs&1;
+			sig_grs >>= 1;
+			sig_grs |= sticky;
+			exp++;
 		}
-
 		if (exp >= 0xff)
 		{
 			/* TODO: assign the number to infinity */
-			printf("\e[0;31mPlease implement me at fpu.c\e[0m\n");
-			fflush(stdout);
-			assert(0);
 			overflow = true;
+			return 0x7f800000 | (sign << 31);
 		}
-		if (exp == 0)
+		else if (exp == 0)
 		{
 			// we have a denormal here, the exponent is 0, but means 2^-126,
 			// as a result, the significand should shift right once more
 			/* TODO: shift right, pay attention to sticky bit*/
-			printf("\e[0;31mPlease implement me at fpu.c\e[0m\n");
-			fflush(stdout);
-			assert(0);
+			uint8_t sticky = sig_grs&1;
+			sig_grs >>= 1;
+			sig_grs |= sticky;
 		}
-		if (exp < 0)
+		else if (exp < 0)
 		{
 			/* TODO: assign the number to zero */
-			printf("\e[0;31mPlease implement me at fpu.c\e[0m\n");
-			fflush(stdout);
-			assert(0);
 			overflow = true;
+			return sign << 31;
 		}
 	}
 	else if (((sig_grs >> (23 + 3)) == 0) && exp > 0)
@@ -59,17 +53,16 @@ inline uint32_t internal_normalize(uint32_t sign, int32_t exp, uint64_t sig_grs)
 		while (((sig_grs >> (23 + 3)) == 0) && exp > 0)
 		{
 			/* TODO: shift left */
-			printf("\e[0;31mPlease implement me at fpu.c\e[0m\n");
-			fflush(stdout);
-			assert(0);
+			sig_grs <<= 1;
+			exp--;
 		}
 		if (exp == 0)
 		{
 			// denormal
 			/* TODO: shift right, pay attention to sticky bit*/
-			printf("\e[0;31mPlease implement me at fpu.c\e[0m\n");
-			fflush(stdout);
-			assert(0);
+			uint8_t sticky = sig_grs&1;
+			sig_grs >>= 1;
+			sig_grs |= sticky;
 		}
 	}
 	else if (exp == 0 && sig_grs >> (23 + 3) == 1)
@@ -77,19 +70,30 @@ inline uint32_t internal_normalize(uint32_t sign, int32_t exp, uint64_t sig_grs)
 		// two denormals result in a normal
 		exp++;
 	}
-
 	if (!overflow)
 	{
 		/* TODO: round up and remove the GRS bits */
-		printf("\e[0;31mPlease implement me at fpu.c\e[0m\n");
-		fflush(stdout);
-		assert(0);
+		uint32_t grs = sig_grs&7;
+		sig_grs >>= 3;
+		if (grs>4 || (grs==4 && (sig_grs&1)))
+		{
+			sig_grs++;
+			if ((sig_grs >> 24) & 1)
+			{
+				sig_grs >>= 1;
+				exp++;
+				if (exp >= 0xff)
+				{
+					overflow = true;
+					return 0x7f800000 | (sign << 31);
+				}
+			}
+		}
 	}
-
 	FLOAT f;
 	f.sign = sign;
 	f.exponent = (uint32_t)(exp & 0xff);
-	f.fraction = sig_grs; // here only the lowest 23 bits are kept
+	f.fraction = sig_grs & 0x7fffff; // here only the lowest 23 bits are kept
 	return f.val;
 }
 
@@ -110,93 +114,39 @@ CORNER_CASE_RULE corner_add[] = {
 // a + b
 uint32_t internal_float_add(uint32_t b, uint32_t a)
 {
-
 	// corner cases
 	int i = 0;
 	for (; i < sizeof(corner_add) / sizeof(CORNER_CASE_RULE); i++)
-	{
 		if (a == corner_add[i].a && b == corner_add[i].b)
 			return corner_add[i].res;
-	}
-	if (a == P_ZERO_F || a == N_ZERO_F)
-	{
-		return b;
-	}
-	if (b == P_ZERO_F || b == N_ZERO_F)
-	{
-		return a;
-	}
+	if (a == P_ZERO_F || a == N_ZERO_F) return b;
+	if (b == P_ZERO_F || b == N_ZERO_F) return a;
 
 	FLOAT f, fa, fb;
-	fa.val = a;
-	fb.val = b;
+	fa.val = a, fb.val = b;
 	// infity, NaN
-	if (fa.exponent == 0xff)
-	{
-		return a;
-	}
-	if (fb.exponent == 0xff)
-	{
-		return b;
-	}
-
-	if (fa.exponent > fb.exponent)
-	{
-		fa.val = b;
-		fb.val = a;
-	}
-
-	uint32_t sig_a, sig_b, sig_res;
-	sig_a = fa.fraction;
-	if (fa.exponent != 0)
-		sig_a |= 0x800000; // the hidden 1
-	sig_b = fb.fraction;
-	if (fb.exponent != 0)
-		sig_b |= 0x800000; // the hidden 1
-
-	// alignment shift for fa
-	uint32_t shift = 0;
-
-	/* TODO: shift = ? */
-	printf("\e[0;31mPlease implement me at fpu.c\e[0m\n");
-	fflush(stdout);
-	assert(0);
-	assert(shift >= 0);
-
+	if (fa.exponent == 0xff) return a;
+	if (fb.exponent == 0xff) return b;
+	if (fa.exponent > fb.exponent) fa.val = b, fb.val = a;
+	uint32_t sig_a = fa.fraction, sig_b = fb.fraction, sig_res = 0;
+	if (fa.exponent != 0) sig_a |= 0x800000; // the hidden 1
+	if (fb.exponent != 0) sig_b |= 0x800000; // the hidden 1
+	uint32_t shift = fb.exponent - fa.exponent;
+	if(shift>0 && fa.exponent==0) shift--;
 	sig_a = (sig_a << 3); // guard, round, sticky
 	sig_b = (sig_b << 3);
-
 	uint32_t sticky = 0;
-	while (shift > 0)
+	while (shift--)
 	{
 		sticky = sticky | (sig_a & 0x1);
-		sig_a = sig_a >> 1;
+		sig_a >>= 1;
 		sig_a |= sticky;
-		shift--;
 	}
-
-	// fraction add
-	if (fa.sign)
-	{
-		sig_a *= -1;
-	}
-	if (fb.sign)
-	{
-		sig_b *= -1;
-	}
-
+	if (fa.sign) sig_a *= -1;
+	if (fb.sign) sig_b *= -1;
 	sig_res = sig_a + sig_b;
-
-	if (sign(sig_res))
-	{
-		f.sign = 1;
-		sig_res *= -1;
-	}
-	else
-	{
-		f.sign = 0;
-	}
-
+	if (sign(sig_res)) f.sign = 1, sig_res *= -1;
+	else f.sign = 0;
 	uint32_t exp_res = fb.exponent;
 	return internal_normalize(f.sign, exp_res, sig_res);
 }
@@ -246,21 +196,16 @@ CORNER_CASE_RULE corner_mul[] = {
 // a * b
 uint32_t internal_float_mul(uint32_t b, uint32_t a)
 {
+	// corner cases
 	int i = 0;
 	for (; i < sizeof(corner_mul) / sizeof(CORNER_CASE_RULE); i++)
-	{
 		if (a == corner_mul[i].a && b == corner_mul[i].b)
 			return corner_mul[i].res;
-	}
-
 	if (a == P_NAN_F || a == N_NAN_F || b == P_NAN_F || b == N_NAN_F)
 		return a == P_NAN_F || b == P_NAN_F ? P_NAN_F : N_NAN_F;
-
 	FLOAT fa, fb, f;
-	fa.val = a;
-	fb.val = b;
+	fa.val = a, fb.val = b;
 	f.sign = fa.sign ^ fb.sign;
-
 	if (a == P_ZERO_F || a == N_ZERO_F)
 		return fa.sign ^ fb.sign ? N_ZERO_F : P_ZERO_F;
 	if (b == P_ZERO_F || b == N_ZERO_F)
@@ -269,27 +214,17 @@ uint32_t internal_float_mul(uint32_t b, uint32_t a)
 		return fa.sign ^ fb.sign ? N_INF_F : P_INF_F;
 	if (b == P_INF_F || b == N_INF_F)
 		return fa.sign ^ fb.sign ? N_INF_F : P_INF_F;
-
-	uint64_t sig_a, sig_b, sig_res;
-	sig_a = fa.fraction;
-	if (fa.exponent != 0)
-		sig_a |= 0x800000; // the hidden 1
-	sig_b = fb.fraction;
-	if (fb.exponent != 0)
-		sig_b |= 0x800000; // the hidden 1
-
-	if (fa.exponent == 0)
-		fa.exponent++;
-	if (fb.exponent == 0)
-		fb.exponent++;
-
-	sig_res = sig_a * sig_b; // 24b * 24b
-	uint32_t exp_res = 0;
-
+	uint64_t sig_a = fa.fraction, sig_b = fb.fraction, sig_res = 0;
+	if(fa.exponent==0 && fb.exponent==0)
+		return f.sign ? N_ZERO_F : P_ZERO_F;
 	/* TODO: exp_res = ? leave space for GRS bits. */
-	printf("\e[0;31mPlease implement me at fpu.c\e[0m\n");
-	fflush(stdout);
-	assert(0);
+	int32_t exp_res = fa.exponent + fb.exponent - 127 - 23;
+	if (fa.exponent != 0) sig_a |= 0x800000;
+	else exp_res++;
+	if (fb.exponent != 0) sig_b |= 0x800000;
+	else exp_res++;
+	sig_res = sig_a * sig_b; // 24b * 24b
+	sig_res <<= 3;
 	return internal_normalize(f.sign, exp_res, sig_res);
 }
 
@@ -325,33 +260,20 @@ uint32_t internal_float_div(uint32_t b, uint32_t a)
 	if (a == P_NAN_F || a == N_NAN_F || b == P_NAN_F || b == N_NAN_F)
 		return a == P_NAN_F || b == P_NAN_F ? P_NAN_F : N_NAN_F;
 	if (a == P_INF_F || a == N_INF_F)
-	{
 		return fa.sign ^ fb.sign ? N_INF_F : P_INF_F;
-	}
+	if (b == P_INF_F || b == N_INF_F)
+		return fa.sign ^ fb.sign ? N_ZERO_F : P_ZERO_F;
 	if (b == P_ZERO_F || b == N_ZERO_F)
-	{
 		return fa.sign ^ fb.sign ? N_INF_F : P_INF_F;
-	}
 	if (a == P_ZERO_F || a == N_ZERO_F)
 	{
 		fa.sign = fa.sign ^ fb.sign;
 		return fa.val;
 	}
-	if (b == P_INF_F || b == N_INF_F)
-	{
-		return fa.sign ^ fb.sign ? N_ZERO_F : P_ZERO_F;
-	}
-
 	f.sign = fa.sign ^ fb.sign;
-
-	uint64_t sig_a, sig_b, sig_res;
-	sig_a = fa.fraction;
-	if (fa.exponent != 0)
-		sig_a |= 0x800000; // the hidden 1
-	sig_b = fb.fraction;
-	if (fb.exponent != 0)
-		sig_b |= 0x800000; // the hidden 1
-
+	uint64_t sig_a = fa.fraction, sig_b = fb.fraction, sig_res = 0;
+	if (fa.exponent != 0) sig_a |= 0x800000; // the hidden 1
+	if (fb.exponent != 0) sig_b |= 0x800000; // the hidden 1
 	// efforts to maintain the precision of the result
 	int shift = 0;
 	while (sig_a >> 63 == 0)
@@ -364,13 +286,9 @@ uint32_t internal_float_div(uint32_t b, uint32_t a)
 		sig_b >>= 1;
 		shift++;
 	}
-
 	sig_res = sig_a / sig_b;
-
-	if (fa.exponent == 0)
-		fa.exponent++;
-	if (fb.exponent == 0)
-		fb.exponent++;
+	if (fa.exponent == 0) fa.exponent++;
+	if (fb.exponent == 0) fb.exponent++;
 	uint32_t exp_res = fa.exponent - fb.exponent + 127 - (shift - 23 - 3);
 	return internal_normalize(f.sign, exp_res, sig_res);
 }

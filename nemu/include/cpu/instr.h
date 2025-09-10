@@ -24,37 +24,43 @@ extern uint8_t data_size;
 
 /* TODO: add more instructions here */
 
-#include "cpu/instr/adc.h"
-#include "cpu/instr/add.h"
-#include "cpu/instr/and.h"
+#include "cpu/instr/adc.h"  // done
+#include "cpu/instr/add.h"  // done
+#include "cpu/instr/and.h"  // done
 #include "cpu/instr/call.h"
-#include "cpu/instr/cmp.h"
+#include "cpu/instr/cli.h"  // done
+#include "cpu/instr/cmp.h"  // done
 #include "cpu/instr/cmps.h"
-#include "cpu/instr/dec.h"
-#include "cpu/instr/div.h"
+#include "cpu/instr/dec.h"  // done
+#include "cpu/instr/div.h"  // done
+#include "cpu/instr/flags.h"
+#include "cpu/instr/group.h"
 #include "cpu/instr/in.h"
-#include "cpu/instr/inc.h"
+#include "cpu/instr/inc.h"  // done
 #include "cpu/instr/int_.h"
 #include "cpu/instr/iret.h"
 #include "cpu/instr/jcc.h"
-#include "cpu/instr/lea.h"
-#include "cpu/instr/leave.h"
+#include "cpu/instr/jmp.h"  // done?
+#include "cpu/instr/lea.h"  // done?
+#include "cpu/instr/leave.h"    // done?!
 #include "cpu/instr/lgdt.h"
 #include "cpu/instr/lidt.h"
-#include "cpu/instr/mul.h"
-#include "cpu/instr/neg.h"
-#include "cpu/instr/not.h"
-#include "cpu/instr/or.h"
+#include "cpu/instr/mov.h"  // done
+#include "cpu/instr/mul.h"  // done
+#include "cpu/instr/neg.h"  // done
+#include "cpu/instr/not.h"  // done
+#include "cpu/instr/or.h"   // done
 #include "cpu/instr/out.h"
 #include "cpu/instr/pop.h"
-#include "cpu/instr/push.h"
+#include "cpu/instr/push.h" // done?!
 #include "cpu/instr/ret.h"
-#include "cpu/instr/sbb.h"
+#include "cpu/instr/sbb.h"  // done
+#include "cpu/instr/shift.h"    // done
+#include "cpu/instr/special.h"
 #include "cpu/instr/stos.h"
-#include "cpu/instr/sub.h"
-#include "cpu/instr/test.h"
-#include "cpu/instr/xor.h"
-#include "cpu/instr/cli.h"
+#include "cpu/instr/sub.h"  // done
+#include "cpu/instr/test.h" // done
+#include "cpu/instr/xor.h"  // done
 #include "cpu/instr/sti.h"
 #include "cpu/instr/setcc.h"
 

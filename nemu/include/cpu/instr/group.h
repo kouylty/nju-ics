@@ -15,6 +15,7 @@ extern instr_func group_2_cb_entry[];
 extern instr_func group_2_cv_entry[];
 extern instr_func group_3_b_entry[];
 extern instr_func group_3_v_entry[];
+extern instr_func group_4_b_entry[];
 extern instr_func group_5_indirect_entry[];
 extern instr_func group_7_entry[];
 extern instr_func group_x87_d8_entry[];
@@ -40,6 +41,7 @@ make_instr_func(group_2_cv);
 make_instr_func(group_3_b);
 make_instr_func(group_3_v);
 
+make_instr_func(group_4_b);
 make_instr_func(group_5_indirect);
 
 make_instr_func(group_7);

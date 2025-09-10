@@ -14,6 +14,13 @@ make_instr_func(clc)
 	return 1;
 }
 
+make_instr_func(cmc)
+{
+	cpu.eflags.CF = !cpu.eflags.CF;
+	print_asm_0("cmc", "", 1);
+	return 1;
+}
+
 make_instr_func(sahf)
 {
 	cpu.eflags.val = (cpu.eflags.val & 0xffff0000) | cpu.gpr[0]._8[1];
