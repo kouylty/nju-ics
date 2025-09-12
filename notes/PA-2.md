@@ -11,3 +11,5 @@ kouylty
 #### PA-1.1 指令解码与执行
 
 在这一阶段，我们想让一个二进制可执行文件在 $\tt{NEMU}$ 上运行，我们要做的就是根据指令集进行解码（decode）、翻译成汇编语言然后执行。一条指令大体由两个部分组成：操作码（opcode）和操作数（operand）。
+
+**要求的内容：** 为什么 `test-float` 会 hit BAD trap？我们查看 `NEMU_trap` 会发现，当寄存器 `eax` 等于 $0$ 时，会输出 GOOD，否则输出 BAD。这就说明 `test-float` 程序运行的返回值不是 $0$，也就是说 main 函数并不是以 `return 0` 或 `exit(0)` 结尾。如果这样做可能会导致程序的异常行为（最经典的，在 noip 中不 `return 0` 可能会爆零qaq）。这就提醒我们，main 函数最后一定要 `return 0`。

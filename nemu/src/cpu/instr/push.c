@@ -4,10 +4,9 @@ Put the implementations of `push' instructions here.
 */
 static void instr_execute_1op()
 {
-    opr_src.data_size = data_size;
+    operand_read(&opr_src);
     cpu.esp -= data_size / 8;
-    opr_src.addr = cpu.esp;
-    vaddr_write(opr_src.addr, SREG_SS, data_size / 8, opr_src.val);
+    vaddr_write(cpu.esp, SREG_SS, data_size / 8, opr_src.val);
 }
 
 make_instr_impl_1op(push, r, v)

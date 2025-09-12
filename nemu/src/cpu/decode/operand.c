@@ -6,6 +6,7 @@ OPERAND opr_src, opr_dest;
 
 void operand_read(OPERAND *opr)
 {
+	// printf("operand read: type %d, data_size %u, addr %x\n", opr->type, (uint8_t)opr->data_size, opr->addr);
 	switch (opr->type)
 	{
 	case OPR_MEM:
@@ -77,6 +78,7 @@ void operand_read(OPERAND *opr)
 
 void operand_write(OPERAND *opr)
 {
+	// printf("operand write: type %d, data_size %u, addr %x, val 0x%x\n", opr->type, (uint8_t)opr->data_size, opr->addr, opr->val);
 	switch (opr->type)
 	{
 	case OPR_MEM:
