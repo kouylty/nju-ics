@@ -2,8 +2,8 @@
 /*
 Put the implementations of `pop' instructions here.
 */
-static void instr_execute_1op() {
-    opr_src.data_size = data_size;
+static void instr_execute_1op()
+{
     opr_src.val = vaddr_read(cpu.esp, SREG_SS, data_size / 8);
     cpu.esp += data_size / 8;
     operand_write(&opr_src);

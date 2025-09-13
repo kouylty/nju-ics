@@ -4,7 +4,7 @@ Put the implementations of `call' instructions here.
 */
 
 make_instr_func(call_near)
-{;
+{
 	OPERAND rel;
 	rel.type = OPR_IMM;
 	rel.sreg = SREG_CS;
