@@ -1,0 +1,50 @@
+------make------
+1757326670278
+Mon Sep 8 18:17:50 CST 2025
+cd nemu && make
+------make------
+1757326670752
+Mon Sep 8 18:17:50 CST 2025
+make-[1]: Entering directory '/home/pa241220001/pa_nju/nemu'
+make-[1]: 'nemu' is up to date.
+make-[1]: Leaving directory '/home/pa241220001/pa_nju/nemu'
+cd testcase && make
+------make------
+1757326670778
+Mon Sep 8 18:17:50 CST 2025
+make-[1]: Entering directory '/home/pa241220001/pa_nju/testcase'
+gcc -ggdb3 -MMD -MP -Wall -m32 -march=i386 -fno-pic -fno-builtin -fno-stack-protector -I../include -I../libs/newlib/include -c -o src/start.o start.S	
+make-[1]: Leaving directory '/home/pa241220001/pa_nju/testcase'
+cd kernel && make
+------make------
+1757326670817
+Mon Sep 8 18:17:50 CST 2025
+make-[1]: Entering directory '/home/pa241220001/pa_nju/kernel'
+make-[1]: 'kernel' is up to date.
+make-[1]: Leaving directory '/home/pa241220001/pa_nju/kernel'
+./nemu/nemu --testcase mov
+NEMU load and execute img: [1m[32m./testcase/bin/mov.img[0m  elf: [1m[36m./testcase/bin/mov[0m
+(nemu) c
+invalid opcode(eip = 0x00030000): e9 00 00 00 00 b8 00 00 ...
+
+There are two cases which will trigger this unexpected exception:
+1. The instruction at eip = 0x00030000 is not implemented.
+2. Something is implemented incorrectly.
+Find this eip value(0x00030000) in the disassembling result to distinguish which case it is.
+
+[1;31mIf it is the first case, see
+ _ ____   ___    __    __  __                         _ 
+(_)___ \ / _ \  / /   |  \/  |                       | |
+ _  __) | (_) |/ /_   | \  / | __ _ _ __  _   _  __ _| |
+| ||__ < > _ <| '_ \  | |\/| |/ _` | '_ \| | | |/ _` | |
+| |___) | (_) | (_) | | |  | | (_| | | | | |_| | (_| | |
+|_|____/ \___/ \___/  |_|  |_|\__,_|_| |_|\__,_|\__,_|_|
+
+for more details.
+
+If it is the second case, remember:
+* The machine is always right!
+* Every line of untested code is always wrong![0m
+
+nemu: src/cpu/instr/inv.c:63: inv: Assertion `0' failed.
+make-: *** [Makefile:15: run] Aborted (core dumped)

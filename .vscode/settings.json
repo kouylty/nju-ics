@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+		"instr.h": "c",
+		"and.h": "c",
+		"stdlib.h": "c"
+	},
+	"sshfs.configs": [
+		{
+			"name": "sf_njuics"
+		},
+		{
+			"name": "unnamed"
+		}
+	]
+}
