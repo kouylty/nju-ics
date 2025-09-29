@@ -337,7 +337,7 @@ paddr_t page_translate(laddr_t laddr)
 
 最后，我们来稍微看看 kernel 中提到的 `mm_malloc` 函数具体做了哪些事。除了为每个 ELF 文件分配内存，它还要为页分配做工作。具体的，`mm_malloc` 要先计算 VPN 和 VPO，计算出要映射的页的数量，再从物理内存中拿到页帧，为每一个内存页新建自己的 PTE（包括记录权限、修改有效位、记录 PPN 等），最后在把 PTE 加入页表中。
 
-至此，PA-3.3完成。
+至此，PA-3.3 完成。
 
 
 

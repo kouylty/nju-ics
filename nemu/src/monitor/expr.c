@@ -6,6 +6,9 @@
 #include "monitor/breakpoint.h"
 
 #include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
 
 /* We use the POSIX regex functions to process regular expressions.
  * Type 'man regex' for more information about POSIX regex functions.
@@ -48,20 +51,14 @@ static struct rule
 
 	{" +", NOTYPE}, // white space
 	{"\\+", '+'},
-	{"==", EQ},    // equal
-	{"[0-9]+", NUM},
 	{"0[xX][0-9a-fA-F]+", HEX},
+	{"[0-9]+", NUM},
 	{"\\$[a-zA-Z]+", REG},
 	{"[a-zA-Z_][a-zA-Z0-9_]*", SYMB},
 	{"\\*", '*'},
 	{"/", '/'},
 	{"-", '-'},
 	{"%", '%'},
-	{"\\^", '^'},
-	{"\\|", '|'},
-	{"&", '&'},
-	{"<", '<'},
-	{">", '>'},
 	{"<<", SL},
 	{">>", SR},
 	{"<=", LE},
@@ -70,13 +67,14 @@ static struct rule
 	{"\\(", '('},
 	{"\\)", ')'},
 	{"!=", NEQ},
-	{"<=", LE},
-	{">=", GE},
 	{"<", '<'},
 	{">", '>'},
 	{"&&", AND},
 	{"\\|\\|", OR},
 	{"!", NOT},
+	{"\\^", '^'},
+	{"\\|", '|'},
+	{"&", '&'},
 };
 
 #define NR_REGEX (sizeof(rules) / sizeof(rules[0]))
@@ -187,7 +185,7 @@ bool check_para(int p,int q,bool *success)
 
 uint32_t dominant_op(int p,int q)
 {
-	int op=-1,level=10,cnt=0;
+	int op=-1,level=100,cnt=0;
 	for(int i=p;i<=q;i++)
 	{
 		if(tokens[i].type=='(') { cnt++; continue; }
@@ -287,6 +285,8 @@ uint32_t eval(int p,int q, bool *success)
 		case '&': return val1&val2;
 		case '^': return val1^val2;
 		case '|': return val1|val2;
+		case SL: return val1<<val2;
+		case SR: return val1>>val2;
 		case EQ: return val1==val2;
 		case LE: return val1<=val2;
 		case GE: return val1>=val2;
@@ -319,5 +319,6 @@ uint32_t expr(char *e, bool *success)
 		if(tokens[i].type=='-' && (i==0 || check(i-1))) tokens[i].type=NEG;
 		else if(tokens[i].type=='*' && (i==0 || check(i-1))) tokens[i].type=DEREF;
 	}
+	*success = true;
 	return eval(0, nr_token - 1, success);
 }

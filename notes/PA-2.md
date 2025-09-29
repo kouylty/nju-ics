@@ -228,3 +228,127 @@ uint32_t loader()
 **要求的内容：** 为什么要把内存中剩余的空间 `[vaddr+filesz, vaddr+memsz)` 清零？这其实是在初始化内存，类似于 `init_mem()`。
 
 至此，PA-2.2 完成。
+
+
+
+#### PA-2.3 完善调试器
+
+我们都知道 $\tt{linux}$ 中有自带调试器 gdb，在 $\tt{NEMU}$ 中我们也要实现一个简单的调试器，支持打断点、打印变量和表达式的值等。我们要自己做的就是解决后者。
+
+表达式输入进来就是一个允许带空格的字符串，想要求值，第一步就是要解析它，把里面的数字、符号、变量名等识别出来。对于这些元素，我们成为一个 `token`，需要记录的信息是它的名字（字符串）和类型。主体思路是先设置若干规则，按照这些规则拆分这个表达式，得到表达式中每个 `token`。为了解析方便，这里我们就要用到 C 语言中的正则表达式库 `regex.h`。正则表达式（regular expression）是一种对字符串操作的逻辑公式。其中有若干匹配的语法，例如 `[a-z]` 表示任意一个小写字母，`[a-z]+` 表示多个任意小写字母，`\+` 表示加号等等。库中给出了操作正则表达式的若干库函数。`regcomp(regex_t *restrict preg, const char *restrict pattern, int cflags)` 函数把一个字符串 `pattern` 编译成正则表达式范式 `preg`（`regex_t` 类型），成功返回 $0$，失败则返回对应错误码。`cflags` 是可选的编译参数，包括 `REG_EXTENDED`（使用扩展正则语法 ERE）、`REG_NOSUB`（不需要子表达式的位置）、`REG_ICASE`（忽略大小写）等。`regexec(const regex_t *restrict preg, const char *restrict string, size_t nmatch, regmatch_t pmatch[], int eflags)` 函数的功能是在字符串 `string` 上查找并匹配范式 `preg`，匹配上的组（捕获组）记录下偏移信息并存到 `pmatch` 中，成功返回 $0$，失败也是返回对应错误码。`eflags` 与上面的类似，也是可选参数，主要跟行首行尾与换行有关。除了这两个函数，还有返回错误信息的 `regerror` 和释放范式内存的 `regfree`，比较平凡，此处不再赘述。有一个小细节，就是出现的 `restrict` 关键字，它是一个指针限定符（qualifier），意思是在它的作用域内，所指的对象只能通过 `restrict` 的指针来访问，不能用其他指针访问同一对象。有了这个之后，我们在设置规则时只用写出每个 `token` 类型的匹配语法，用 `regcomp` 编译成对应的正则表达式范式，最后用 `regexec` 在原表达式上进行顺次匹配即可。这里要注意的是，因为我们遍历规则是从前往后，所以要注意这些规则的顺序，避免矛盾。比如，`HEX` 要在 `NUM` 前，这样 `0x...` 才会被识别成一个十六进制数，否则会被识别成数字 `0` 和一个符号 `x...`。
+
+```c
+static struct rule
+{
+	char *regex;
+	int token_type;
+} rules[] = {
+	{" +", NOTYPE}, // white space	
+    {"\\+", '+'}, 
+	{"0[xX][0-9a-fA-F]+", HEX},
+	{"[0-9]+", NUM},
+	{"\\$[a-zA-Z]+", REG}, // register
+	{"[a-zA-Z_][a-zA-Z0-9_]*", SYMB}, // variable
+	{"<<", SL}, {">>", SR},
+	{"\\*", '*'}, {"/", '/'}, {"-", '-'}, {"%", '%'},
+	{"==", EQ},	{"!=", NEQ}, {"<=", LE}, {">=", GE},
+	{"\\(", '('}, {"\\)", ')'},
+	{"&&", AND}, {"\\|\\|", OR}, {"!", NOT},
+    {"\\^", '^'}, {"\\|", '|'}, {"&", '&'}, {"<", '<'}, {">", '>'},
+}
+```
+
+```c
+void init_regex()
+{
+	char error_msg[128];
+	int ret;
+	for (int i = 0; i < NR_REGEX; i++)
+	{
+		ret = regcomp(&re[i], rules[i].regex, REG_EXTENDED);
+		if (ret != 0)
+		{
+			regerror(ret, &re[i], error_msg, 128);
+			assert(ret != 0);
+		}
+	}
+}
+```
+
+```c
+static bool make_token(char *e)
+{
+	int position = 0;
+	regmatch_t pmatch;
+	nr_token = 0;
+	while (e[position] != '\0')
+	{
+		for(int i = 0; i < NR_REGEX; i++) // try all rules one by one
+			if (regexec(&re[i], e + position, 1, &pmatch, 0) == 0 && pmatch.rm_so == 0)
+			{
+				char *substr_start = e + position;
+				int substr_len = pmatch.rm_eo;
+				position += substr_len;
+				switch (rules[i].token_type) {
+					case NOTYPE:
+						break;
+					case NUM:
+					case HEX:
+					case REG:
+					case SYMB:
+						tokens[nr_token].type = rules[i].token_type;
+						assert(substr_len < 32); // avoid buffer overflow
+						strncpy(tokens[nr_token].str, substr_start, substr_len);
+						tokens[nr_token].str[substr_len] = '\0';
+						nr_token++;
+						break;
+					default:
+						tokens[nr_token].type = rules[i].token_type;
+						nr_token++;
+				}
+				break;
+			}
+		if (i == NR_REGEX)
+		{
+			printf("no match at position %d\n%s\n%*.s^\n", position, e, position, "");
+			return false;
+		}
+	}
+	return true;
+}
+```
+
+需要注意的是 `*` 不仅可以是乘号，也可以是解引用（dereference），需要特判。`-` 表示负数时同理。
+
+```c
+bool check(int i)
+{
+    return tokens[i].type=='(' || tokens[i].type==EQ || tokens[i].type==NEQ || tokens[i].type==LE || tokens[i].type==GE || 
+		tokens[i].type=='*' || tokens[i].type=='/' || tokens[i].type=='%' || tokens[i].type=='<' || tokens[i].type=='>' || 
+		tokens[i].type== AND || tokens[i].type== OR || tokens[i].type=='&' || tokens[i].type=='|' || tokens[i].type=='^';
+}
+
+for(int i=0;i<nr_token;i++)
+{
+    if(tokens[i].type=='-' && (i==0 || check(i-1))) tokens[i].type=NEG;
+    else if(tokens[i].type=='*' && (i==0 || check(i-1))) tokens[i].type=DEREF;
+}
+```
+
+把表达式解析好之后，就开始求值了。我们采用的是最暴力的递归求值方法（不用后缀表达式的原因之一是其中有大量的一元运算符操作起来有点复杂，原因之二是调试器里支持的表达式长度有限，复杂度可以接受）。对于原子，直接返回它的值。对于一个表达式，如果是在一对括号里，就去掉最外层括号求值。否则就找出表达式中优先级最低的符号，拆成左右两个子表达式分别求值，最后合并。其中要时刻注意先判断表达式是否合法。这个是平方级的时间复杂度。
+
+我们说对于原子，可以直接返回值。原子包括数字、寄存器和符号变量。对于符号或变量，如何找到它的值呢？这就涉及到符号表 `symtab`（symbol table）的概念了。计算机会在每个可执行文件的头部放一个符号表（在 ELF 文件中），存放在程序中定义和引用的函数和全局变量的信息。
+
+**要求的内容：** `symtab` 中不包含局部变量的条目。
+
+这样对于符号求值，我们只要访问程序的符号表即可。这部分功能被抽象成一个接口 `look_up_symtab`，对我们来说直接调用即可。
+
+部分 Testing...
+
+<img src="https://raw.githubusercontent.com/kouylty/nju-ics/master/notes/test2(5).png" style="zoom:50%;" alt="【若图片无法加载，详见https://github.com/kouylty/nju-ics/blob/master/notes/test2(5).png】">
+
+至此，PA-2.3 完成。
+
+
+
+PA-2 撒花！(╹ڡ╹ )
