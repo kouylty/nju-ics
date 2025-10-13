@@ -50,6 +50,11 @@ typedef struct {
 	};
 }SegReg;
 
+typedef struct {
+	uint32_t limit :16;
+	uint32_t base :32;
+}IDTR;
+
 // define the structure of registers
 typedef struct {
 	// general purpose registers

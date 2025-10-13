@@ -28,7 +28,6 @@ extern uint8_t data_size;
 #include "cpu/instr/add.h"  // done
 #include "cpu/instr/and.h"  // done
 #include "cpu/instr/call.h"	// done
-#include "cpu/instr/cli.h"  // done
 #include "cpu/instr/cmp.h"  // done
 #include "cpu/instr/cmps.h"	// done
 #include "cpu/instr/dec.h"  // done
@@ -43,8 +42,8 @@ extern uint8_t data_size;
 #include "cpu/instr/jmp.h"  // done
 #include "cpu/instr/lea.h"  // done
 #include "cpu/instr/leave.h"    // done
-#include "cpu/instr/lgdt.h"
-#include "cpu/instr/lidt.h"
+#include "cpu/instr/lgdt.h" // done
+#include "cpu/instr/lidt.h" // done
 #include "cpu/instr/mov.h"  // done
 #include "cpu/instr/mul.h"  // done
 #include "cpu/instr/neg.h"  // done
@@ -58,7 +57,6 @@ extern uint8_t data_size;
 #include "cpu/instr/setcc.h"	// done
 #include "cpu/instr/shift.h"    // done
 #include "cpu/instr/special.h"	// done
-#include "cpu/instr/sti.h"
 #include "cpu/instr/stos.h"	// done
 #include "cpu/instr/sub.h"  // done
 #include "cpu/instr/test.h" // done
