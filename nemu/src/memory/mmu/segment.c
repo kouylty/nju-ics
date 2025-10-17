@@ -4,13 +4,18 @@
 // return the linear address from the virtual address and segment selector
 uint32_t segment_translate(uint32_t offset, uint8_t sreg)
 {
+#ifdef IA32_SEG
 	uint32_t base = cpu.segReg[sreg].base;
 	return offset + base;
+#else
+	return offset;
+#endif
 }
 
 // load the invisible part of a segment register
 void load_sreg(uint8_t sreg)
 {
+#ifdef IA32_SEG
 	SegDesc desc;
 	desc.val[0] = laddr_read(cpu.gdtr.base + cpu.segReg[sreg].index * 8, 4);
 	desc.val[1] = laddr_read(cpu.gdtr.base + cpu.segReg[sreg].index * 8 + 4, 4);
@@ -22,4 +27,5 @@ void load_sreg(uint8_t sreg)
 	assert(cpu.segReg[sreg].base == 0);
 	assert(cpu.segReg[sreg].limit == 0xfffff);
 	assert(desc.granularity == 1);
+#endif
 }

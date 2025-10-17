@@ -39,9 +39,9 @@ make_instr_func(jmp_short)
 	return 2;
 }
 
-#ifdef IA32_SEG
 make_instr_func(jmp_far)
 {
+#ifdef IA32_SEG
 	opr_src.type = OPR_IMM;
 	opr_src.sreg = SREG_CS;
 	opr_src.data_size = 16;
@@ -56,6 +56,6 @@ make_instr_func(jmp_far)
 	load_sreg(SREG_CS);
 	cpu.eip = opr_dest.val;
 	print_asm_2("jmp", "", 1 + data_size / 8 + 2, &opr_dest, &opr_src);
+#endif
 	return 0;
 }
-#endif

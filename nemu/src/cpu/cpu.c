@@ -122,12 +122,14 @@ void exec(uint32_t n)
 	}
 }
 
+bool start_print_opcode = false;
+
 int exec_inst()
 {
 	uint8_t opcode = 0;
 	// get the opcode
 	opcode = instr_fetch(cpu.eip, 1);
-	// if(opcode==0x60 || opcode==0x61) printf("pe = %d, pg = %d, opcode = %x, eip = %x\n", cpu.cr0.pe, cpu.cr0.pg, opcode, cpu.eip);
+	// if(opcode==0xcd || start_print_opcode) { printf("opcode = %x, eip = %x\n", opcode, cpu.eip); start_print_opcode = true; }
 // instruction decode and execution
 #ifdef NEMU_REF_INSTR
 	int len = __ref_opcode_entry[opcode](cpu.eip, opcode);
