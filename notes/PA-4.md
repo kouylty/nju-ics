@@ -144,3 +144,121 @@ asm_do_irq:
 **要求的内容：** 最后，我们来比较一下 $\tt{NEMU}$ 及其内核在相应系统调用和时钟中断的异同。两者的相同点是执行的都是系统预定义好的异常处理程序等等。两者的第一类不同点在于异常出现的位置，系统调用的异常是直接在系统内部，而类似于时钟中断的异常是来自外部接口的异常，两者的第二个不同点在于获取异常处理程序的方式，系统调用是直接通过 `int` 指令查找中断描述表来找到异常处理程序的起始位置，索引是通过 `idtr` 和 `intr_no`，而时钟中断是 CPU 执行指令的过程中异步检查并处理，不设置单独的指令。
 
 至此，PA-4.1 完成。
+
+
+
+#### PA-4.2 外设与IO
+
+目前在 $\tt{NEMU}$ 中，模拟了四种外设：串口（serial）、硬盘（IDE）、键盘（keyborad）和显示器（VGA）。
+
+与前三者的 IO 我们采用端口映射 IO（port-mapped IO），我们可以自定义端口与外设之间的对应关系，然后 CPU 通过 `in` 和 `out` 指令对端口进行读写。特殊的，对于控制台（terminal）而言，它的端口号是 `0x3f8`。对于串口的模拟，$\tt{NEMU}$ 会在每次开始时初始化 `serial`，之后，我们就可以调用 `serial_printc()` 向控制台进行输出，该函数先等待对应串口空闲，再向串口输出一个字节的字符。
+
+```c
+void serial_printc(char ch)
+{
+	while (!serial_idle());
+	out_byte(SERIAL_PORT, ch);
+}
+```
+
+这样，我们输出时就绕过了 `nemu_trap`，控制台上 `nemu trap output` 的标记也会消失。
+
+对于硬盘的模拟，我们设置对应的端口号为从 `0x1f0` 开始的连续八个端口。在模拟了硬盘后，在 `init_ide()` 里我们把硬盘关联到测试用例的 ELF 文件，这样，之后加载测试用例，就不再是从 RAM Disk 中加载，而是从 Hard Disk 中加载，这就要我们重写 `loader()` 函数。把对应于 RAM 的 `memcpy` 函数替换成 `ide_read` 即可。
+
+```c
+uint32_t *bp = (uint32_t *)mm_malloc(ph->p_vaddr, ph->p_memsz);
+ide_read((void *)bp, ELF_OFFSET_IN_DISK + ph->p_offset, ph->p_filesz);
+memset((void *)(bp + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
+```
+
+部分 Testing...
+
+<img src="https://raw.githubusercontent.com/kouylty/nju-ics/master/notes/test4(5).png" style="zoom:50%;" alt="【若图片无法加载，详见https://github.com/kouylty/nju-ics/blob/master/notes/test4(5).png】">
+
+**要求的内容：** 然后是对键盘的模拟。注册监听键盘事件是如何完成的？键盘的外部事件包含两类：按下和抬起。在 $\tt{NEMU}$ 启动时，会调用 `init_sdl()` 函数以及在其中的 `keyborad_start()` 函数，把 `keyboard_active` 变量置成 $1$。处理键盘事件的核心函数是 `do_keyborad()`。
+
+```c
+void keyboard_down(uint32_t sym)
+{
+	scan_code_buf = sym2scancode[sym >> 8][sym & 0xff];
+	i8259_raise_intr(KEYBOARD_IRQ);
+}
+
+void keyboard_up(uint32_t sym)
+{
+	scan_code_buf = sym2scancode[sym >> 8][sym & 0xff] | 0x80
+	i8259_raise_intr(KEYBOARD_IRQ);
+}
+
+void do_keyboard()
+{
+	SDL_Event e;
+	uint64_t current_time = get_current_time_ms();
+	if(keyboard_active && (current_time - last_time) >= 1)
+	{
+		while (SDL_PollEvent(&e))
+		{
+			if (e.type == SDL_QUIT)
+			{
+				nemu_state = NEMU_STOP;
+				keyboard_active = false;
+			}
+			else if (e.type == SDL_KEYDOWN)
+				keyboard_down(e.key.keysym.sym);
+			else if (e.type == SDL_KEYUP)
+				keyboard_up(e.key.keysym.sym);
+		}
+		last_time = current_time;
+	}
+}
+```
+
+函数中，持续用 SDL 库捕获键盘事件，分别处理按下和抬起事件。在处理每个事件时，先记录下按键的键位映射，然后提出键盘事件让内核处理。
+
+**要求的内容：** 有一个关于键盘的测试用例 `echo`。功能是每按下一个字母，就会在控制台上输出对应的大写字母。首先，把键盘处理程序通过 `add_irq_handle()` 函数加入中断描述符表中。对于这个中断处理程序，做了 $26$ 个字母的键位映射，然后对应返回大写字母，再用 `write()` 函数输出。 
+
+```c
+static int letter_code[] = {
+	30, 48, 46, 32, 18, 33, 34, 35, 23, 36,
+	37, 38, 50, 49, 24, 25, 16, 19, 31, 20,
+	22, 47, 17, 45, 21, 44};
+char translate_key(int scan_code)
+{
+	for (int i = 0; i < 26; i++)
+		if (letter_code[i] == scan_code)
+			return i + 0x41;
+	return 0;
+}
+
+void keyboard_event_handler()
+{
+	uint8_t key_pressed = in_byte(0x60);
+	char c = translate_key(key_pressed);
+	if (c > 0) printc(c);
+}
+```
+
+最后是有关显示器的模拟。这一部分我们采用内存映射 IO（memory-mapped IO），把显存映射到物理内存中。之后对于物理内存的读写，我们就要判断是否有内存映射。如果有，就要用显存的读写函数；如果没有，就正常读写物理内存。同时，因为我们的物理内存还有保护和分页机制，我们在内存映射时还要手动为映射的内存添加到页表中。这里我们直接暴力的把所有表项填满，这样肯定会包含显存的表项，性能也不会有变化，因为只是把冷启动时的 cold miss 变成了 eviction。
+
+```c
+void create_video_mapping()
+{
+	PDE *pdir = (PDE *)va_to_pa(get_updir());
+	PTE *ptable = (PTE *)va_to_pa(table);
+	uint32_t pdir_idx=0, ptable_idx=0, pframe_idx=0;
+	pdir[pdir_idx].val = make_pde(ptable);
+	for (ptable_idx = 0; ptable_idx < NR_PTE; ptable_idx++)
+	{
+		ptable->val = make_pte(pframe_idx << 12);
+		pframe_idx++;
+		ptable++;
+	}
+}
+```
+
+至此，PA-4.2 完成。
+
+
+
+#### PA-4.3 游戏移植
+
