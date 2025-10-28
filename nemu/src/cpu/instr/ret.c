@@ -4,9 +4,9 @@ Put the implementations of `ret' instructions here.
 */
 make_instr_func(ret_near)
 {
+	print_asm_0("ret", "", 1);
 	cpu.eip = vaddr_read(cpu.esp, SREG_SS, 4);
 	cpu.esp += 4;
-	print_asm_0("ret", "", 1);
 	return 0;
 }
 
@@ -21,12 +21,13 @@ make_instr_func(ret_near_imm16)
 	imm.addr = eip + 1;
 	operand_read(&imm);
 	cpu.esp += imm.val;
-	print_asm_1("ret", "", 1 + 2, &imm);
 	return 0;
+	print_asm_1("ret", "", 1 + 2, &imm);
 }
 
 make_instr_func(ret_far)
 {
+	print_asm_0("ret", "", 1);
 	cpu.eip = vaddr_read(cpu.esp, SREG_SS, 4);
 	cpu.esp += 4;
 #ifdef IA32_SEG
@@ -34,7 +35,6 @@ make_instr_func(ret_far)
 	cpu.esp += 2;
 	load_sreg(SREG_CS);
 #endif
-	print_asm_0("ret", "", 1);
 	return 0;
 }
 

@@ -37,6 +37,11 @@ uint32_t loader()
 		if (ph->p_type == PT_LOAD)
 		{
 			// panic("Please implement the loader");
+#ifdef HAS_DEVICE_IDE
+			uint32_t *bp = (uint32_t *)mm_malloc(ph->p_vaddr, ph->p_memsz);
+			ide_read((void *)bp, ELF_OFFSET_IN_DISK + ph->p_offset, ph->p_filesz);
+			memset((void *)(bp + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
+#else
 #ifdef IA32_PAGE
 			uint32_t *bp = (uint32_t *)mm_malloc(ph->p_vaddr, ph->p_memsz);
 			memcpy((void *)bp, (void *)elf + ph->p_offset, ph->p_filesz);
@@ -45,6 +50,7 @@ uint32_t loader()
 			uint8_t *bp = (uint8_t *)ph->p_vaddr;
 			memcpy(bp, (uint8_t *)elf + ph->p_offset, ph->p_filesz);
             memset(bp + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
+#endif
 #endif
 
 #ifdef IA32_PAGE

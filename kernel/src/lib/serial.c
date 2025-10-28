@@ -13,8 +13,8 @@ serial_idle(void)
 
 void serial_printc(char ch)
 {
-	while (!serial_idle())
-		; // wait untile serial is idle
+	while (!serial_idle());
 	// print 'ch' via out instruction here
-	HIT_BAD_TRAP;
+	out_byte(SERIAL_PORT, ch);
+	// HIT_BAD_TRAP;
 }
